@@ -1,778 +1,734 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workshop Live Monitor</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .monitor {
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            background: #000;
+        }
+
+        /* ==============================
+           LEFT
+        ============================== */
+
+        .left {
+            min-width: 0;
+            min-height: 0;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+        }
+
+        /* ==============================
+           HEADER
+        ============================== */
+
+        .header {
+            height: 78px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #333;
+        }
+
+        .title-area h1 {
+            font-size: 34px;
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
+
+        .title-area .subtitle {
+            margin-top: 3px;
+            color: #888;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .clock-area {
+            text-align: right;
+        }
+
+        #time {
+            font-size: 36px;
+            line-height: 36px;
+            font-weight: 900;
+        }
+
+        #date {
+            margin-top: 5px;
+            color: #aaa;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        /* ==============================
+           LEGEND
+        ============================== */
+
+        .legend {
+            height: 46px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            border-bottom: 1px solid #222;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-<title>Workshop Live Monitor</title>
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
 
-<style>
+        .dot-assigned {
+            background: #ffe600;
+        }
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial, Helvetica, sans-serif;
-}
+        .dot-working {
+            background: #2196f3;
+        }
 
-html,body{
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:#000;
-    color:#fff;
-}
+        .dot-waiting {
+            background: #ff7b00;
+        }
 
+        .dot-completed {
+            background: #22c55e;
+        }
 
-/* ==============================
-   MAIN SCREEN
-============================== */
+        .dot-unable {
+            background: #ef4444;
+        }
 
-.monitor{
-    width:100vw;
-    height:100vh;
+        /* ==============================
+           LORRY GRID
+        ============================== */
 
-    display:grid;
-    grid-template-columns:minmax(0,1fr) 360px;
+        .lorry-grid {
+            flex: 1;
+            min-height: 0;
+            padding-top: 10px;
 
-    background:#000;
-}
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: repeat(2, minmax(0, 1fr));
 
+            gap: 10px;
+        }
 
-/* ==============================
-   LEFT
-============================== */
+        /* ==============================
+           LORRY CARD
+        ============================== */
 
-.left{
-    min-width:0;
-    height:100vh;
+        .lorry-card {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+
+            display: flex;
+            flex-direction: column;
+
+            overflow: hidden;
+
+            background: #000;
+            border: 2px solid #444;
+            border-radius: 8px;
+        }
+
+        /*
+           Flash layer.
+
+           We use an overlay instead of changing only
+           the card background.
 
-    padding:14px;
+           This makes the red flash visible even when
+           technician rows have their own backgrounds.
+        */
 
-    display:flex;
-    flex-direction:column;
+        .lorry-card::after {
+            content: "";
+            position: absolute;
+
+            left: 0;
+            right: 0;
+            top: 60px;
+            bottom: 25px;
 
-    background:#000;
-}
+            z-index: 50;
 
+            background: rgba(255, 70, 70, 0);
+            pointer-events: none;
+        }
 
-/* ==============================
-   HEADER
-============================== */
+        .lorry-card.page-flash::after {
+            animation: taskPageFlash 1.15s ease-out;
+        }
 
-.header{
-    height:78px;
-    flex-shrink:0;
+        @keyframes taskPageFlash {
+            0% {
+                background: rgba(255, 80, 80, 0);
+            }
 
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+            12% {
+                background: rgba(255, 105, 105, 0.40);
+            }
 
-    border-bottom:2px solid #333;
+            30% {
+                background: rgba(255, 70, 70, 0.12);
+            }
 
-    padding:0 5px 10px 5px;
-}
+            48% {
+                background: rgba(255, 105, 105, 0.35);
+            }
 
-.title h1{
-    font-size:34px;
-    font-weight:900;
-    letter-spacing:1px;
-    color:#fff;
-}
+            70% {
+                background: rgba(255, 70, 70, 0.10);
+            }
 
-.title p{
-    display:none;
-}
+            100% {
+                background: rgba(255, 80, 80, 0);
+            }
+        }
 
-.clock{
-    text-align:right;
-}
+        /* ==============================
+           LORRY HEADER
+        ============================== */
 
-#time{
-    font-size:36px;
-    line-height:38px;
-    font-weight:900;
-    color:#fff;
-}
+        .lorry-header {
+            min-height: 60px;
+            height: 60px;
+            flex-shrink: 0;
 
-#date{
-    font-size:16px;
-    margin-top:4px;
-    font-weight:800;
-    color:#fff;
-}
+            padding: 7px 12px;
 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
-/* ==============================
-   LEGEND
-============================== */
+            gap: 10px;
 
-.legend{
-    height:46px;
-    flex-shrink:0;
+            background: #ffd400;
+            color: #000;
 
-    display:flex;
-    align-items:center;
+            position: relative;
+            z-index: 60;
+        }
 
-    gap:25px;
+        .lorry-no {
+            color: #000;
+            font-size: 31px;
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
 
-    padding:0 5px;
+        .job-count {
+            color: #000;
+            font-size: 14px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
 
-    border-bottom:1px solid #222;
+        /* ==============================
+           TASK AREA
+        ============================== */
 
-    font-size:14px;
-    font-weight:900;
-}
+        .task-scroll {
+            flex: 1;
+            min-height: 0;
 
-.legend-item{
-    display:flex;
-    align-items:center;
-    gap:7px;
-}
+            overflow: hidden;
+
+            padding: 5px 10px;
 
-.dot{
-    width:12px;
-    height:12px;
-    border-radius:50%;
-}
+            position: relative;
+            z-index: 1;
+        }
+
+        .task {
+            padding: 5px 0 7px;
+            border-bottom: 1px solid #292929;
+        }
+
+        .task:last-child {
+            border-bottom: none;
+        }
+
+        .task-name {
+            margin-bottom: 3px;
+
+            color: #fff;
+
+            font-size: 21px;
+            line-height: 24px;
+            font-weight: 900;
 
+            letter-spacing: 0.5px;
+        }
 
-/* ==============================
-   LORRY GRID
-   6 LORRIES
-============================== */
+        /* ==============================
+           TECHNICIAN ROW
+        ============================== */
 
-.lorry-grid{
-    flex:1;
-    min-height:0;
+        .tech {
+            min-height: 33px;
+            height: 33px;
 
-    padding-top:10px;
+            margin-top: 5px;
+            padding: 5px 8px;
 
-    display:grid;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
-    grid-template-columns:
-        repeat(3,minmax(0,1fr));
+            gap: 8px;
 
-    grid-template-rows:
-        repeat(2,minmax(0,1fr));
+            border-left: 4px solid transparent;
+            border-radius: 3px;
+        }
 
-    gap:10px;
-}
+        .tech-name {
+            min-width: 0;
 
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
 
-/* ==============================
-   LORRY CARD
-============================== */
+            font-size: 17px;
+            font-weight: 900;
+        }
 
-.lorry-card{
-    min-width:0;
-    min-height:0;
+        .tech-status {
+            flex-shrink: 0;
 
-    display:flex;
-    flex-direction:column;
+            font-size: 14px;
+            font-weight: 900;
+        }
 
-    background:#050505;
+        /* ==============================
+           STATUS
+        ============================== */
 
-    border:2px solid #444;
+        .assigned {
+            background: #4d4000;
+            color: #ffe600;
+            border-left-color: #ffe600;
+        }
 
-    border-radius:8px;
+        .working {
+            background: #052f5f;
+            color: #4da3ff;
+            border-left-color: #2196f3;
+        }
 
-    overflow:hidden;
-}
+        .waiting {
+            background: #512600;
+            color: #ff922b;
+            border-left-color: #ff7b00;
+        }
 
+        .completed {
+            background: #073d20;
+            color: #42e879;
+            border-left-color: #22c55e;
+        }
 
-/* ==============================
-   YELLOW LORRY HEADER
-============================== */
+        .unable {
+            background: #4b1010;
+            color: #ff6b6b;
+            border-left-color: #ef4444;
+        }
 
-.lorry-header{
-    min-height:60px;
-    flex-shrink:0;
+        .closed {
+            background: #262626;
+            color: #aaa;
+            border-left-color: #777;
+        }
 
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+        /* ==============================
+           TASK PAGE FOOTER
+        ============================== */
 
-    padding:10px 14px;
+        .task-page-info {
+            height: 25px;
+            flex-shrink: 0;
 
-    background:#ffd400;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-    border-bottom:2px solid #ffd400;
-}
+            border-top: 1px solid #222;
 
-.lorry-no{
-    font-size:31px;
-    font-weight:900;
-    letter-spacing:1px;
+            color: #777;
 
-    color:#000;
-}
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
 
-.job-count{
-    font-size:14px;
-    font-weight:900;
+            position: relative;
+            z-index: 60;
 
-    color:#000;
-}
+            background: #000;
+        }
 
+        .task-page-info.multi {
+            color: #ffd400;
+        }
 
-/* ==============================
-   TASK AREA
-   NO SCROLL
-============================== */
+        /* ==============================
+           EMPTY
+        ============================== */
 
-.task-scroll{
-    flex:1;
-    min-height:0;
+        .empty-card {
+            min-width: 0;
+            min-height: 0;
 
-    overflow:hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-    padding:8px 13px 4px 13px;
-}
+            border: 2px dashed #222;
+            border-radius: 8px;
 
-.task{
-    padding:9px 0 11px 0;
+            color: #333;
 
-    border-bottom:2px solid #252525;
-}
+            font-size: 18px;
+            font-weight: 900;
+        }
 
-.task:last-child{
-    border-bottom:none;
-}
+        /* ==============================
+           MAIN FOOTER
+        ============================== */
 
-.task-name{
-    font-size:21px;
+        .footer {
+            height: 36px;
+            flex-shrink: 0;
 
-    font-weight:900;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
-    letter-spacing:.5px;
+            padding-top: 6px;
 
-    color:#fff;
+            color: #777;
 
-    margin-bottom:7px;
-}
+            font-size: 11px;
+            font-weight: 900;
+        }
 
+        #pageInfo {
+            color: #aaa;
+        }
 
-/* ==============================
-   TECHNICIAN INSIDE TASK
-============================== */
+        #nextPage {
+            color: #ffd400;
+        }
 
-.tech{
-    width:100%;
+        /* ==============================
+           RIGHT SIDE
+        ============================== */
 
-    min-height:33px;
+        .right {
+            min-width: 0;
+            min-height: 0;
 
-    margin-top:5px;
+            display: grid;
+            grid-template-rows: 62% 38%;
 
-    padding:6px 10px;
+            border-left: 2px solid #333;
 
-    border-radius:5px;
+            background: #050505;
+        }
 
-    display:flex;
+        .side-panel {
+            min-height: 0;
 
-    justify-content:space-between;
+            display: flex;
+            flex-direction: column;
 
-    align-items:center;
+            overflow: hidden;
+        }
 
-    gap:10px;
+        .side-panel + .side-panel {
+            border-top: 2px solid #333;
+        }
 
-    font-weight:900;
-}
+        .side-title {
+            height: 47px;
+            flex-shrink: 0;
 
-.tech-name{
-    font-size:17px;
+            display: flex;
+            align-items: center;
 
-    white-space:nowrap;
+            padding: 0 14px;
 
-    overflow:hidden;
+            background: #111;
+            border-bottom: 1px solid #333;
 
-    text-overflow:ellipsis;
-}
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
 
-.tech-status{
-    font-size:14px;
+        /* ==============================
+           TECH SUMMARY
+        ============================== */
 
-    white-space:nowrap;
-}
+        .tech-summary {
+            height: 66px;
+            flex-shrink: 0;
 
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
 
-/* ==============================
-   STATUS COLORS
-============================== */
+            gap: 5px;
+            padding: 6px;
+        }
 
-.assigned{
-    background:#4d4000;
-    color:#ffe600;
-    border-left:5px solid #ffe600;
-}
+        .summary-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
 
-.working{
-    background:#052f5f;
-    color:#4da3ff;
-    border-left:5px solid #2196f3;
-}
+            background: #111;
 
-.waiting{
-    background:#512600;
-    color:#ff922b;
-    border-left:5px solid #ff7b00;
-}
+            border: 1px solid #252525;
+            border-radius: 4px;
+        }
 
-.completed{
-    background:#073d20;
-    color:#42e879;
-    border-left:5px solid #22c55e;
-}
+        .summary-number {
+            font-size: 23px;
+            font-weight: 900;
+        }
 
-.unable{
-    background:#4b1010;
-    color:#ff6b6b;
-    border-left:5px solid #ef4444;
-}
+        .summary-label {
+            margin-top: 2px;
 
-.closed{
-    background:#262626;
-    color:#d4d4d4;
-    border-left:5px solid #737373;
-}
+            color: #777;
 
+            font-size: 9px;
+            font-weight: 900;
+        }
 
-/* ==============================
-   TASK PAGE INDICATOR
-============================== */
+        /* ==============================
+           TECHNICIAN LIVE
+        ============================== */
 
-.task-page-info{
-    height:25px;
+        .technician-list {
+            flex: 1;
+            min-height: 0;
 
-    flex-shrink:0;
+            overflow: hidden;
 
-    display:flex;
-    align-items:center;
-    justify-content:center;
+            padding: 0 7px 7px;
+        }
 
-    border-top:1px solid #222;
+        .technician-row {
+            padding: 8px 7px;
 
-    background:#0a0a0a;
+            border-bottom: 1px solid #242424;
+        }
 
-    color:#999;
+        .tech-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
-    font-size:11px;
+            gap: 8px;
 
-    font-weight:900;
-}
+            font-size: 14px;
+            font-weight: 900;
+        }
 
-.task-page-info.multi{
-    color:#ffd400;
-}
+        .tech-job {
+            margin-top: 4px;
 
+            color: #777;
 
-/* ==============================
-   EMPTY LORRY
-============================== */
+            font-size: 11px;
+            font-weight: 700;
+        }
 
-.empty-card{
-    min-width:0;
-    min-height:0;
+        /* ==============================
+           READY
+        ============================== */
 
-    display:flex;
+        .ready-list {
+            flex: 1;
+            min-height: 0;
 
-    align-items:center;
-    justify-content:center;
+            overflow: hidden;
 
-    background:#030303;
+            padding: 7px;
+        }
 
-    border:2px dashed #292929;
+        .ready-item {
+            margin-bottom: 7px;
 
-    border-radius:8px;
+            padding: 10px;
 
-    color:#555;
+            background: #062d18;
 
-    font-size:18px;
+            border: 1px solid #138a45;
+            border-left: 5px solid #22c55e;
 
-    font-weight:800;
-}
+            border-radius: 5px;
+        }
 
+        .ready-lorry {
+            color: #4ade80;
 
-/* ==============================
-   MAIN PAGE FOOTER
-============================== */
+            font-size: 19px;
+            font-weight: 900;
+        }
 
-.footer{
-    height:36px;
-    flex-shrink:0;
+        .ready-time {
+            margin-top: 3px;
 
-    display:flex;
+            color: #8fd6a9;
 
-    align-items:flex-end;
-    justify-content:space-between;
+            font-size: 11px;
+            font-weight: 700;
+        }
 
-    padding:0 4px 2px 4px;
+        /* ==============================
+           SMALLER DESKTOP
+        ============================== */
 
-    color:#fff;
+        @media (max-width: 1400px) {
 
-    font-size:14px;
+            .monitor {
+                grid-template-columns: minmax(0, 1fr) 320px;
+            }
 
-    font-weight:900;
-}
+            .title-area h1 {
+                font-size: 28px;
+            }
 
+            #time {
+                font-size: 31px;
+            }
 
-/* ==============================
-   RIGHT SIDE
-============================== */
+            .lorry-no {
+                font-size: 27px;
+            }
 
-.right{
-    height:100vh;
+            .task-name {
+                font-size: 18px;
+            }
 
-    min-height:0;
+            .tech-name {
+                font-size: 15px;
+            }
 
-    background:#000;
-
-    border-left:3px solid #444;
-
-    display:grid;
-
-    grid-template-rows:62% 38%;
-}
-
-
-/* ==============================
-   TECHNICIAN PANEL
-============================== */
-
-.technician-panel{
-    min-height:0;
-
-    display:flex;
-    flex-direction:column;
-
-    border-bottom:3px solid #444;
-}
-
-.panel-title{
-    height:52px;
-
-    flex-shrink:0;
-
-    display:flex;
-    align-items:center;
-
-    padding:0 14px;
-
-    background:#111;
-
-    border-bottom:2px solid #333;
-}
-
-.panel-title h2{
-    font-size:21px;
-
-    font-weight:900;
-
-    color:#fff;
-}
-
-
-/* ==============================
-   TECH SUMMARY
-============================== */
-
-.tech-summary{
-    flex-shrink:0;
-
-    display:grid;
-
-    grid-template-columns:repeat(3,1fr);
-
-    gap:7px;
-
-    padding:9px;
-}
-
-.summary-box{
-    background:#111;
-
-    border:1px solid #292929;
-
-    border-radius:6px;
-
-    text-align:center;
-
-    padding:8px 2px;
-}
-
-.summary-number{
-    font-size:27px;
-
-    font-weight:900;
-
-    color:#fff;
-}
-
-.summary-label{
-    font-size:10px;
-
-    font-weight:800;
-
-    margin-top:3px;
-
-    color:#aaa;
-}
-
-
-/* ==============================
-   TECHNICIAN LIST
-   NO SCROLL
-============================== */
-
-.technician-list{
-    flex:1;
-
-    min-height:0;
-
-    overflow:hidden;
-
-    padding:0 9px 9px 9px;
-}
-
-.technician-row{
-    background:#0d0d0d;
-
-    border:1px solid #292929;
-
-    border-radius:6px;
-
-    padding:10px;
-
-    margin-bottom:7px;
-}
-
-.tech-top{
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-    gap:8px;
-
-    font-size:16px;
-
-    font-weight:900;
-}
-
-.tech-job{
-    margin-top:5px;
-
-    color:#d4d4d4;
-
-    font-size:13px;
-
-    font-weight:700;
-}
-
-
-/* ==============================
-   READY LORRY
-============================== */
-
-.ready-panel{
-    min-height:0;
-
-    display:flex;
-    flex-direction:column;
-}
-
-.ready-title{
-    height:52px;
-
-    flex-shrink:0;
-
-    display:flex;
-    align-items:center;
-
-    padding:0 14px;
-
-    background:#111;
-
-    border-bottom:2px solid #333;
-}
-
-.ready-title h2{
-    font-size:21px;
-
-    font-weight:900;
-
-    color:#fff;
-}
-
-.ready-list{
-    flex:1;
-
-    min-height:0;
-
-    overflow:hidden;
-
-    padding:10px;
-}
-
-.ready-item{
-    background:#063b1d;
-
-    border-left:6px solid #22c55e;
-
-    border-radius:6px;
-
-    padding:11px 12px;
-
-    margin-bottom:9px;
-}
-
-.ready-lorry{
-    color:#4ade80;
-
-    font-size:22px;
-
-    font-weight:900;
-}
-
-.ready-time{
-    color:#d1fae5;
-
-    font-size:12px;
-
-    font-weight:700;
-
-    margin-top:4px;
-}
-
-
-/* ==============================
-   SMALLER SCREEN
-============================== */
-
-@media(max-width:1400px){
-
-    .monitor{
-        grid-template-columns:
-            minmax(0,1fr) 320px;
-    }
-
-    .title h1{
-        font-size:29px;
-    }
-
-    #time{
-        font-size:31px;
-    }
-
-    .lorry-no{
-        font-size:27px;
-    }
-
-    .task-name{
-        font-size:18px;
-    }
-
-    .tech-name{
-        font-size:15px;
-    }
-
-}
-
-</style>
+            .tech-status {
+                font-size: 12px;
+            }
+        }
+    </style>
 </head>
-
 
 <body>
 
 <div class="monitor">
 
-    <!-- LEFT -->
-
     <main class="left">
 
         <header class="header">
 
-            <div class="title">
-
-                <h1>
-                    🔧 WORKSHOP LIVE MONITOR
-                </h1>
-
+            <div class="title-area">
+                <h1>🔧 WORKSHOP LIVE MONITOR</h1>
+                <div class="subtitle">
+                    LIVE WORKSHOP STATUS
+                </div>
             </div>
 
-
-            <div class="clock">
-
-                <div id="time">
-                    --:--:--
-                </div>
-
-                <div id="date">
-                    ---
-                </div>
-
+            <div class="clock-area">
+                <div id="time">--:--:--</div>
+                <div id="date">LOADING...</div>
             </div>
 
         </header>
 
 
-        <!-- LEGEND -->
-
         <div class="legend">
 
             <div class="legend-item">
-                <span class="dot"
-                      style="background:#ffe600">
-                </span>
+                <span class="legend-dot dot-assigned"></span>
                 ASSIGNED
             </div>
 
             <div class="legend-item">
-                <span class="dot"
-                      style="background:#2196f3">
-                </span>
+                <span class="legend-dot dot-working"></span>
                 WORKING
             </div>
 
             <div class="legend-item">
-                <span class="dot"
-                      style="background:#ff7b00">
-                </span>
+                <span class="legend-dot dot-waiting"></span>
                 WAITING
             </div>
 
             <div class="legend-item">
-                <span class="dot"
-                      style="background:#22c55e">
-                </span>
+                <span class="legend-dot dot-completed"></span>
                 COMPLETED
             </div>
 
             <div class="legend-item">
-                <span class="dot"
-                      style="background:#ef4444">
-                </span>
+                <span class="legend-dot dot-unable"></span>
                 UNABLE
             </div>
 
         </div>
 
 
-        <!-- LORRY GRID -->
-
         <section
-            class="lorry-grid"
-            id="lorryGrid">
+            id="lorryGrid"
+            class="lorry-grid">
         </section>
 
-
-        <!-- FOOTER -->
 
         <footer class="footer">
 
             <div id="pageInfo">
                 PAGE 1 / 1
+            </div>
+
+            <div>
+                SMART TASK AUTO PAGE
             </div>
 
             <div id="nextPage">
@@ -784,99 +740,75 @@ html,body{
     </main>
 
 
-
-    <!-- RIGHT -->
-
     <aside class="right">
 
+        <section class="side-panel">
 
-        <!-- TECHNICIAN LIVE -->
-
-        <section class="technician-panel">
-
-            <div class="panel-title">
-
-                <h2>
-                    👨‍🔧 TECHNICIAN LIVE
-                </h2>
-
+            <div class="side-title">
+                👨‍🔧 TECHNICIAN LIVE
             </div>
 
 
             <div class="tech-summary">
 
                 <div class="summary-box">
-
                     <div
-                        class="summary-number"
-                        id="totalTech">
+                        id="totalTech"
+                        class="summary-number">
                         0
                     </div>
 
                     <div class="summary-label">
                         TOTAL
                     </div>
-
                 </div>
 
 
                 <div class="summary-box">
-
                     <div
-                        class="summary-number"
-                        id="workingTech">
+                        id="workingTech"
+                        class="summary-number">
                         0
                     </div>
 
                     <div class="summary-label">
                         WORKING
                     </div>
-
                 </div>
 
 
                 <div class="summary-box">
-
                     <div
-                        class="summary-number"
-                        id="availableTech">
+                        id="availableTech"
+                        class="summary-number">
                         0
                     </div>
 
                     <div class="summary-label">
                         AVAILABLE
                     </div>
-
                 </div>
 
             </div>
 
 
             <div
-                class="technician-list"
-                id="technicianList">
+                id="technicianList"
+                class="technician-list">
             </div>
 
         </section>
 
 
+        <section class="side-panel">
 
-        <!-- READY -->
-
-        <section class="ready-panel">
-
-            <div class="ready-title">
-
-                <h2>
-                    🚛 READY FOR USE
-                </h2>
-
+            <div class="side-title">
+                🚚 READY FOR USE
             </div>
 
-
             <div
-                class="ready-list"
-                id="readyList">
+                id="readyList"
+                class="ready-list">
             </div>
 
         </section>
@@ -884,7 +816,6 @@ html,body{
     </aside>
 
 </div>
-
 
 <script src="monitor.js"></script>
 
